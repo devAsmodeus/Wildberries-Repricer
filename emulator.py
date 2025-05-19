@@ -1,4 +1,5 @@
 import time
+import traceback
 import pyautogui
 
 from selenium.webdriver.common.by import By
@@ -64,13 +65,16 @@ def create_chrome() -> webdriver.Chrome:
                 "credentials_enable_service": False,
                 "profile.password_manager_enabled": False
             })
-            options.add_argument("--incognito")
+            # options.add_argument("--incognito")
             options.add_argument("--start-maximized")
             options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument(r"--user-data-dir=C:\Users\KruglikovskiiPA\AppData\Local\Google\ChromeSelenium")
+            options.add_argument("--profile-directory=Profile 3")
             driver = webdriver.Chrome(options=options)
-            driver.implicitly_wait(30)
+            driver.implicitly_wait(10)
             return driver
-        except selenium.common.exceptions.WebDriverException:
+        except selenium.common.exceptions.WebDriverException as selenium_exception:
+            print(traceback.format_exc())
             continue
     else:
         raise ValueError('WebDriver не найден')

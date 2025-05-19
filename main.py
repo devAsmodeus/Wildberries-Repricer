@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
-from typing import Optional
-from pydantic import BaseModel, field_validator
 from aiohttp import TCPConnector
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -20,52 +18,14 @@ from telethon.tl.types import InputPeerUser
 from requests import *
 from emulator import get_coefficient
 
+import scmRepricer
 
 COEFFICIENT_LIMIT = 15_330.0
 
 
-class MessageModel(BaseModel):
-    API_ID: Optional[int]
-    API_HASH: Optional[str]
-    SESSION_STRING: Optional[str]
-    scriptName: Optional[str]
-    startTime: datetime
-    runTime: Optional[timedelta]
-    users: list[str]
-    error: bool
-    errorText: Optional[str]
-    message: Optional[str]
-
-
-class CardPriceModel(BaseModel):
-    nmID: int
-    vendorCode: str
-    brand: str
-    prices: list[float | int]
-    discount: int
-    addClubDiscount: int
-    clubDiscountedPrices: list[float | int]
-    discountOnSite: Optional[int] = 0
-    discountedPrices: list[float | int]
-    discountSitePrice: Optional[float] = 0.0
-    walletSitePrice: Optional[float] = 0.0
-
-    @field_validator('discountOnSite', mode='before')
-    @classmethod
-    def format_article(cls, value: Optional[int]) -> int:
-        return 0 if value is None else value
-
-
-class CardPriceEditModel(BaseModel):
-    price: int
-    discount: int
-    discountSite: int
-    coefficientWallet: float
-
-
 async def start_script():
     api_id, api_hash, session_string = get_env_variables()
-    message = MessageModel(**{
+    message = scmRepricer.MessageModel(**{
         'API_ID': int(api_id),
         'API_HASH': api_hash,
         'SESSION_STRING': session_string,
@@ -88,10 +48,11 @@ async def start_script():
             f'Время работы программы: {message.runTime}\nОшибка: {message.errorText}'
         )
     finally:
-        await send_report(message)
+        print(message.message)
+        # await send_report(message)
 
 
-async def main(message: MessageModel) -> MessageModel:
+async def main(message: scmRepricer.MessageModel) -> scmRepricer.MessageModel:
     headers, connector = get_headers(False), TCPConnector(ssl=False)
     async with ClientSession(headers=headers, connector=connector) as session:
         coefficient = get_coefficient()
@@ -107,7 +68,7 @@ async def main(message: MessageModel) -> MessageModel:
     return message
 
 
-async def upload_prices(prices: dict[int, CardPriceEditModel]) -> int:
+async def upload_prices(prices: dict[int, scmRepricer.CardPriceEditModel]) -> int:
     result = list()
     df = pd.read_excel(
         get_filename(), sheet_name='Цены', engine='openpyxl',
@@ -116,6 +77,8 @@ async def upload_prices(prices: dict[int, CardPriceEditModel]) -> int:
     pd.DataFrame.replace(df, {np.nan: None, '': None}, inplace=True)
     for _, row in df.iterrows():
         if all([nm_id := row['Артикул WB'], excel_price := row['МРЦ']]) and nm_id in prices:
+            # if nm_id != 235786068:
+            #     continue
             edit_model, nm_id, excel_price = prices[nm_id], int(nm_id), int(excel_price)
             discount, discount_site = edit_model.discount, edit_model.discountSite
             discount = discount if discount else 50
@@ -143,11 +106,14 @@ async def update_prices(data: list[dict]) -> int:
             return len(data)
 
 
-def format_prices(prices: list[CardPriceModel], coefficient: float) -> dict[int, CardPriceEditModel]:
+def format_prices(
+        prices: list[scmRepricer.CardPriceModel],
+        coefficient: float
+) -> dict[int, scmRepricer.CardPriceEditModel]:
     result = dict()
     for card in prices:
         for price, discount_price, club_price in zip(card.prices, card.discountedPrices, card.clubDiscountedPrices):
-            result[card.nmID] = CardPriceEditModel(**{
+            result[card.nmID] = scmRepricer.CardPriceEditModel(**{
                 'price': price,
                 'discount': card.discount,
                 'discountSite': card.discountOnSite,
@@ -158,7 +124,7 @@ def format_prices(prices: list[CardPriceModel], coefficient: float) -> dict[int,
         return result
 
 
-async def get_prices(session: ClientSession) -> list[CardPriceModel]:
+async def get_prices(session: ClientSession) -> list[scmRepricer.CardPriceModel]:
     result, data = list(), {
         "limit": 1000, "offset": 0, "facets": [], "filterWithoutPrice": False,
         "filterWithLeftovers": True, "sort": "price", "sortOrder": 0
@@ -167,15 +133,15 @@ async def get_prices(session: ClientSession) -> list[CardPriceModel]:
         *_, prices = await parse_prices(session, data)
         prices = json.loads(prices).get('data', dict()).get('listGoods', list())
         if prices:
-            result.extend([CardPriceModel(**card) for card in prices])
+            result.extend([scmRepricer.CardPriceModel(**card) for card in prices])
             data['offset'] += 1000
         else:
             return result
 
 
 def get_filename() -> str:
-    filename = r'C:/Programs/Запись цен.xlsx'
-    # filename = r'./Запись цен.xlsx'
+    # filename = r'C:/Programs/Запись цен.xlsx'
+    filename = r'./Запись цен.xlsx'
     if not os.path.exists(filename):
         raise FileNotFoundError('Файл не найден')
     else:
@@ -217,7 +183,7 @@ def get_env_variables() -> tuple[str, str, str]:
         raise FileNotFoundError('Файл с переменными не найден')
 
 
-async def send_report(message: MessageModel) -> None:
+async def send_report(message: scmRepricer.MessageModel) -> None:
     async with TelegramClient(StringSession(message.SESSION_STRING), message.API_ID, message.API_HASH) as client:
         for user in message.users:
             user_info = await client.get_entity(user)
