@@ -48,8 +48,7 @@ async def start_script():
             f'Время работы программы: {message.runTime}\nОшибка: {message.errorText}'
         )
     finally:
-        print(message.message)
-        # await send_report(message)
+        await send_report(message)
 
 
 async def main(message: scmRepricer.MessageModel) -> scmRepricer.MessageModel:
@@ -77,8 +76,6 @@ async def upload_prices(prices: dict[int, scmRepricer.CardPriceEditModel]) -> in
     pd.DataFrame.replace(df, {np.nan: None, '': None}, inplace=True)
     for _, row in df.iterrows():
         if all([nm_id := row['Артикул WB'], excel_price := row['МРЦ']]) and nm_id in prices:
-            # if nm_id != 235786068:
-            #     continue
             edit_model, nm_id, excel_price = prices[nm_id], int(nm_id), int(excel_price)
             discount, discount_site = edit_model.discount, edit_model.discountSite
             discount = discount if discount else 50
@@ -140,8 +137,8 @@ async def get_prices(session: ClientSession) -> list[scmRepricer.CardPriceModel]
 
 
 def get_filename() -> str:
-    # filename = r'C:/Programs/Запись цен.xlsx'
-    filename = r'./Запись цен.xlsx'
+    filename = r'C:/Programs/Запись цен.xlsx'
+    # filename = r'./Запись цен.xlsx'
     if not os.path.exists(filename):
         raise FileNotFoundError('Файл не найден')
     else:

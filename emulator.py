@@ -68,8 +68,8 @@ def create_chrome() -> webdriver.Chrome:
             # options.add_argument("--incognito")
             options.add_argument("--start-maximized")
             options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_argument(r"--user-data-dir=C:\Users\KruglikovskiiPA\AppData\Local\Google\ChromeSelenium")
-            options.add_argument("--profile-directory=Profile 3")
+            options.add_argument(r"--user-data-dir=C:\Users\Administrator\AppData\Local\Google\ChromeSelenium")
+            options.add_argument("--profile-directory=Profile 1")
             driver = webdriver.Chrome(options=options)
             driver.implicitly_wait(10)
             return driver
