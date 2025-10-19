@@ -12,13 +12,14 @@ import selenium.common.exceptions
 
 def get_coefficient() -> float:
     driver, coefficient = create_chrome(), 1.0
+    driver.implicitly_wait(60)
     try:
         driver.get('https://www.wildberries.ru')
         time.sleep(10)
         for card in driver.find_elements(By.CSS_SELECTOR, 'a[class*="product-card__link"]'):
             script = "return document.querySelector('.product-card__wrapper').innerText;"
             card_description: str = driver.execute_script(script, card)
-            if 'с wb кошельком' in card_description.lower():
+            if 'с WB Кошельком' in card_description.lower():
                 price_count = card_description.count('₽') - 1
             else:
                 price_count = card_description.count('₽')
@@ -36,12 +37,12 @@ def get_coefficient() -> float:
 
 
 def update_card(driver: webdriver.Chrome, price_count: int) -> float:
-    tries = 10
+    tries = 3
     while tries:
         time.sleep(5)
         wait = WebDriverWait(driver, 30)
-        wait.until(ec.presence_of_element_located((By.CLASS_NAME, 'price-block')))
-        script = "return document.querySelector('.price-block').innerText;"
+        wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div[class*=priceBlockContent]')))
+        script = "return document.querySelector('div[class*=priceBlockContent]').innerText;"
         prices: str = driver.execute_script(script)
         if prices.count('₽') in (price_count, price_count + 1, price_count + 2):
             prices: list[str] = ''.join(prices.split()).split('₽')
