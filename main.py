@@ -32,7 +32,7 @@ async def start_script():
         'scriptName': 'Обновление цен карточек Wildberries',
         'startTime': datetime.now(),
         'runTime': None,
-        'users': ['Azat747', 'AsmodeusGL'],
+        'users': ['Azat747'],
         'error': False,
         'errorText': None,
         'message': None
